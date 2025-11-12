@@ -1,181 +1,364 @@
-algoritmo "Sistema de Atendimento de Chamados"
+algoritmo "Sistema de Atendimento de Chamados Aprimorado"
 
-// Estruturas para Chamados, Técnicos e Relatórios
+// --- Constantes de Limite ---
+const
+   LIMITE_CHAMADOS = 100
+   LIMITE_TECNICOS = 10
 
+// --- Definição dos Tipos (Registros) ---
 tipo Chamado
-    id : inteiro
-    descricao : caractere
-    tecnicoResponsavel : caractere
-    status : caractere // "Aberto", "Em Andamento", "Concluído", "Escalonado"
-    prioridade : inteiro // 1 (alta) a 5 (baixa)
-    dataAbertura : caractere
-    dataConclusao : caractere
+   id: inteiro
+   descricao: caractere
+   indiceTecnico: inteiro // OTIMIZAÇÃO: Armazena o ÍNDICE do técnico (0 = Nenhum)
+   status: caractere // "Aberto", "Em Andamento", "Concluído", "Escalonado"
+   prioridade: inteiro // 1 (alta) a 5 (baixa)
+   dataAbertura: caractere // Simplificado para simulação
+   dataConclusao: caractere
 fimTipo
 
 tipo Tecnico
-    nome : caractere
-    areaEspecializacao : caractere
-    chamadoAtendido : inteiro
+   nome: caractere
+   areaEspecializacao: caractere
+   chamadosAtendidos: inteiro // Contador de quantos chamados concluíu
 fimTipo
 
-tipo Relatorio
-    totalChamados : inteiro
-    chamadosConcluidos : inteiro
-    chamadosEmAndamento : inteiro
-    chamadosEscalonados : inteiro
-fimTipo
+// --- Variáveis Globais ---
+var
+   chamados: vetor[1..LIMITE_CHAMADOS] de Chamado
+   tecnicos: vetor[1..LIMITE_TECNICOS] de Tecnico
+   totalChamados: inteiro
+   totalTecnicos: inteiro
+   opcao: inteiro
 
-// Variáveis Globais
-vetor chamados[1..100] : Chamado
-vetor tecnicos[1..10] : Tecnico
-relatorio : Relatorio
-totalChamados : inteiro
-totalTecnicos : inteiro
-opcao : inteiro
-
-// Inicialização
+// --- Procedimento: Pausa a execução ---
+procedimento Pausar()
+var
+   tecla: caractere
 inicio
-    totalChamados ← 0
-    totalTecnicos ← 0
-    relatorio.totalChamados ← 0
-    relatorio.chamadosConcluidos ← 0
-    relatorio.chamadosEmAndamento ← 0
-    relatorio.chamadosEscalonados ← 0
+   escreva("\n(Pressione [ENTER] para voltar ao menu...)")
+   leia(tecla)
+fimprocedimento
 
-    // Função para adicionar um técnico
-    funcao adicionarTecnico()
-        totalTecnicos ← totalTecnicos + 1
-        escreva("Nome do Técnico: ")
-        leia(tecnicos[totalTecnicos].nome)
-        escreva("Área de Especialização: ")
-        leia(tecnicos[totalTecnicos].areaEspecializacao)
-        tecnicos[totalTecnicos].chamadoAtendido ← 0
-        escreva("Técnico adicionado com sucesso!\n")
-    fimfuncao
+// --- Funções Auxiliares de Busca (para validação) ---
+funcao buscarTecnicoPorNome(nome: caractere) : inteiro
+   var i: inteiro
+   para i de 1 até totalTecnicos faca
+      se (tecnicos[i].nome = nome) entao
+         retorne i
+      fimse
+   fimpara
+   retorne 0
+fimfuncao
 
-    // Função para adicionar um chamado
-    funcao adicionarChamado()
-        totalChamados ← totalChamados + 1
-        chamados[totalChamados].id ← totalChamados
-        escreva("Descrição do Chamado: ")
-        leia(chamados[totalChamados].descricao)
-        escreva("Prioridade (1 a 5, sendo 1 a mais alta): ")
-        leia(chamados[totalChamados].prioridade)
-        chamados[totalChamados].status ← "Aberto"
-        chamados[totalChamados].dataAbertura ← agora() // captura data atual
-        chamados[totalChamados].tecnicoResponsavel ← "Nenhum"
-        escreva("Chamado adicionado com sucesso!\n")
-    fimfuncao
+// Valida se o ID existe e retorna o índice (que é o próprio ID)
+funcao buscarChamadoPorID(id: inteiro) : inteiro
+   se (id > 0) e (id <= totalChamados) entao
+      retorne id
+   senao
+      retorne 0
+   fimse
+fimfuncao
 
-    // Função para atribuir um técnico a um chamado
-    funcao atribuirTecnico()
-        idChamado : inteiro
-        escreva("Informe o ID do Chamado a ser atribuído: ")
-        leia(idChamado)
+// --- Procedimento: Adicionar Técnico (com validação) ---
+procedimento adicionarTecnico()
+var
+   nomeTecnico, areaTecnico: caractere
+inicio
+   limpatela
+   escreva("--- Adicionar Técnico ---\n")
+   
+   
+   se (totalTecnicos >= LIMITE_TECNICOS) entao
+      escreva("[ERRO] Limite de (", LIMITE_TECNICOS, ") técnicos atingido!\n")
+   senao
+      escreva("Nome do Técnico: ")
+      leia(nomeTecnico)
+      
+      // Validação de Duplicidade
+      se (buscarTecnicoPorNome(nomeTecnico) > 0) entao
+         escreva("\n[ERRO] Já existe um técnico com este nome!\n")
+      senao
+         escreva("Área de Especialização (ex: Redes, Hardware): ")
+         leia(areaTecnico)
+         
+         totalTecnicos <- totalTecnicos + 1
+         tecnicos[totalTecnicos].nome <- nomeTecnico
+         tecnicos[totalTecnicos].areaEspecializacao <- areaTecnico
+         tecnicos[totalTecnicos].chamadosAtendidos <- 0
+         
+         escreva("\nTécnico '", nomeTecnico, "' adicionado com sucesso!\n")
+      fimse
+   fimse
+fimprocedimento
 
-        se (idChamado > 0) e (idChamado <= totalChamados) então
-            escreva("Selecione o Técnico:\n")
-            para i de 1 até totalTecnicos faça
-                escreva(i, ": ", tecnicos[i].nome, " - ", tecnicos[i].areaEspecializacao, "\n")
-            fimpara
-            escreva("Escolha um técnico pelo número: ")
-            inteiro escolhaTecnico
-            leia(escolhaTecnico)
+// --- Procedimento: Adicionar Chamado (com validação) ---
+procedimento adicionarChamado()
+var
+   prioridadeChamado: inteiro
+inicio
+   limpatela
+   escreva("--- Abrir Novo Chamado ---\n")
+   
+   se (totalChamados >= LIMITE_CHAMADOS) entao
+      escreva("[ERRO] Limite de (", LIMITE_CHAMADOS, ") chamados atingido!\n")
+   senao
+      totalChamados <- totalChamados + 1
+      chamados[totalChamados].id <- totalChamados
+      
+      escreva("Descrição do Chamado: ")
+      leia(chamados[totalChamados].descricao)
+      
+      // Validação de Prioridade
+      prioridadeChamado <- 0
+      enquanto (prioridadeChamado < 1) ou (prioridadeChamado > 5) faca
+         escreva("Prioridade (1=Alta, 5=Baixa): ")
+         leia(prioridadeChamado)
+         se (prioridadeChamado < 1) ou (prioridadeChamado > 5) entao
+            escreva("[ERRO] A prioridade deve ser um número entre 1 e 5.\n")
+         fimse
+      fimenquanto
+      chamados[totalChamados].prioridade <- prioridadeChamado
+      
+      // Dados padrão
+      chamados[totalChamados].status <- "Aberto"
+      chamados[totalChamados].indiceTecnico <- 0 // 0 = Não atribuído
+      chamados[totalChamados].dataAbertura <- "12/11/2025" // Placeholder (agora() não existe)
+      chamados[totalChamados].dataConclusao <- ""
+      
+      escreva("\nChamado ID ", totalChamados, " adicionado com sucesso!\n")
+   fimse
+fimprocedimento
 
-            se (escolhaTecnico > 0) e (escolhaTecnico <= totalTecnicos) então
-                chamados[idChamado].tecnicoResponsavel ← tecnicos[escolhaTecnico].nome
-                chamados[idChamado].status ← "Em Andamento"
-                tecnicos[escolhaTecnico].chamadoAtendido ← tecnicos[escolhaTecnico].chamadoAtendido + 1
-                escreva("Técnico atribuído com sucesso!\n")
-            senão
-                escreva("Técnico inválido.\n")
-            fimse
-        senão
-            escreva("Chamado inválido.\n")
-        fimse
-    fimfuncao
+// --- Procedimento: Atribuir Técnico a Chamado ---
+procedimento atribuirTecnico()
+var
+   idChamado, idTecnico, i: inteiro
+inicio
+   limpatela
+   escreva("--- Atribuir Chamado --- \n")
+   
+   se (totalTecnicos = 0) ou (totalChamados = 0) entao
+      escreva("[ERRO] É preciso ter pelo menos um técnico E um chamado cadastrado.\n")
+      retorne
+   fimse
+   
+   escreva("Digite o ID do Chamado a ser atribuído: ")
+   leia(idChamado)
+   
+   idChamado <- buscarChamadoPorID(idChamado) // Valida o ID
+   
+   se (idChamado = 0) entao
+      escreva("\n[ERRO] Chamado inválido.\n")
+   senao se (chamados[idChamado].status <> "Aberto") entao
+      escreva("\n[ERRO] Este chamado não está 'Aberto'. (Status: ", chamados[idChamado].status, ")\n")
+   senao
+      // Lista os técnicos disponíveis
+      escreva("\n--- Técnicos Disponíveis ---\n")
+      para i de 1 até totalTecnicos faca
+         escreva(i, ": ", tecnicos[i].nome, " (", tecnicos[i].areaEspecializacao, ")\n")
+      fimpara
+      
+      idTecnico <- 0
+      enquanto (idTecnico < 1) ou (idTecnico > totalTecnicos) faca
+         escreva("Escolha o ID do técnico: ")
+         leia(idTecnico)
+      fimenquanto
+      
+      // Atribui o chamado
+      chamados[idChamado].indiceTecnico <- idTecnico // Armazena o ÍNDICE
+      chamados[idChamado].status <- "Em Andamento"
+      
+      escreva("\nChamado ", idChamado, " atribuído a '", tecnicos[idTecnico].nome, "' com sucesso!\n")
+   fimse
+fimprocedimento
 
-    // Função para concluir um chamado
-    funcao concluirChamado()
-        idChamado : inteiro
-        escreva("Informe o ID do Chamado a ser concluído: ")
-        leia(idChamado)
+// --- Procedimento: Atualizar Status de Chamado (Novo) ---
+// (Combina Concluir e Escalonar em um só)
+procedimento atualizarStatusChamado()
+var
+   idChamado, opStatus, idTecnico: inteiro
+   novoStatus: caractere
+inicio
+   limpatela
+   escreva("--- Atualizar Status de Chamado ---\n")
+   
+   escreva("Digite o ID do Chamado: ")
+   leia(idChamado)
+   
+   idChamado <- buscarChamadoPorID(idChamado) // Valida o ID
+   
+   se (idChamado = 0) entao
+      escreva("\n[ERRO] Chamado inválido.\n")
+   senao se (chamados[idChamado].status = "Aberto") entao
+      escreva("\n[ERRO] Atribua um técnico antes de atualizar o status.\n")
+   senao se (chamados[idChamado].status = "Concluído") ou (chamados[idChamado].status = "Escalonado") entao
+      escreva("\n[AVISO] Este chamado já está finalizado (", chamados[idChamado].status, ").\n")
+   senao
+      // Se o chamado está "Em Andamento"
+      escreva("Chamado: ", chamados[idChamado].descricao, "\n")
+      
+      opStatus <- 0
+      enquanto (opStatus < 1) ou (opStatus > 2) faca
+         escreva("Selecione o novo status:\n")
+         escreva("1. Concluído\n")
+         escreva("2. Escalonado\n")
+         escreva("Opção: ")
+         leia(opStatus)
+      fimenquanto
+      
+      se (opStatus = 1) entao
+         chamados[idChamado].status <- "Concluído"
+         chamados[idChamado].dataConclusao <- "12/11/2025" // Placeholder
+         
+         // Incrementa o contador do técnico responsável
+         idTecnico <- chamados[idChamado].indiceTecnico
+         se (idTecnico > 0) entao // Segurança
+            tecnicos[idTecnico].chamadosAtendidos <- tecnicos[idTecnico].chamadosAtendidos + 1
+         fimse
+         
+         escreva("\nChamado CONCLUÍDO com sucesso!\n")
+      senao
+         chamados[idChamado].status <- "Escalonado"
+         escreva("\nChamado ESCALONADO com sucesso!\n")
+      fimse
+   fimse
+fimprocedimento
 
-        se (idChamado > 0) e (idChamado <= totalChamados) então
-            chamados[idChamado].status ← "Concluído"
-            chamados[idChamado].dataConclusao ← agora() // captura data atual
-            relatorio.chamadosConcluidos ← relatorio.chamadosConcluidos + 1
-            escreva("Chamado concluído com sucesso!\n")
-        senão
-            escreva("Chamado inválido.\n")
-        fimse
-    fimfuncao
+// --- Procedimento: Listar Todos os Chamados (NOVO) ---
+procedimento listarChamados()
+var
+   i, idTecnico: inteiro
+   nomeTecnico: caractere
+   c: Chamado // Variável auxiliar
+inicio
+   limpatela
+   escreva("=================================================================================\n")
+   escreva("=                           LISTA DE CHAMADOS                               =\n")
+   escreva("=================================================================================\n")
+   escreva("ID | Prio | Status        | Responsável        | Descrição\n")
+   escreva("---------------------------------------------------------------------------------\n")
+   
+   se (totalChamados = 0) entao
+      escreva("  (Nenhum chamado cadastrado)\n")
+   fimse
+   
+   para i de 1 até totalChamados faca
+      c <- chamados[i] // Pega o chamado
+      
+      // Busca o nome do técnico (ou "Nenhum")
+      idTecnico <- c.indiceTecnico
+      se (idTecnico = 0) entao
+         nomeTecnico <- "(Nenhum)"
+      senao
+         nomeTecnico <- tecnicos[idTecnico].nome
+      fimse
+      
+      escreva(c.id:2, " | ")
+      escreva(c.prioridade:4, " | ")
+      escreva(c.status:13, " | ")
+      escreva(nomeTecnico:18, " | ")
+      escreva(c.descricao, "\n")
+      
+   fimpara
+   escreva("=================================================================================\n")
+fimprocedimento
 
-    // Função para escalar um chamado
-    funcao escalarChamado()
-        idChamado : inteiro
-        escreva("Informe o ID do Chamado a ser escalonado: ")
-        leia(idChamado)
+// --- Procedimento: Gerar Sumário (Relatório Aprimorado) ---
+procedimento gerarSumario()
+var
+   i, abertos, emAndamento, concluidos, escalonados: inteiro
+inicio
+   limpatela
+   escreva("=========================================\n")
+   escreva("=       SUMÁRIO DE ATENDIMENTO        =\n")
+   escreva("=========================================\n")
+   
+   
+   // --- LÓGICA DE RELATÓRIO APRIMORADA ---
+   // Calcula as estatísticas do zero, garantindo 100% de precisão
+   abertos <- 0
+   emAndamento <- 0
+   concluidos <- 0
+   escalonados <- 0
+   
+   para i de 1 até totalChamados faca
+      escolha chamados[i].status
+         caso "Aberto"
+            abertos <- abertos + 1
+         caso "Em Andamento"
+            emAndamento <- emAndamento + 1
+         caso "Concluído"
+            concluidos <- concluidos + 1
+         caso "Escalonado"
+            escalonados <- escalonados + 1
+      fimescolha
+   fimpara
+   
+   escreva("Total de Chamados: ", totalChamados, "\n")
+   escreva("-----------------------------------------\n")
+   escreva("Chamados Abertos (aguardando): ", abertos, "\n")
+   escreva("Chamados Em Andamento: ", emAndamento, "\n")
+   escreva("Chamados Concluídos: ", concluidos, "\n")
+   escreva("Chamados Escalonados: ", escalonados, "\n")
+   escreva("=========================================\n")
+   
+   escreva("\n--- Desempenho dos Técnicos (Concluídos) ---\n")
+   para i de 1 até totalTecnicos faca
+      escreva(tecnicos[i].nome, ": ", tecnicos[i].chamadosAtendidos, " chamados\n")
+   fimpara
+   escreva("=========================================\n")
+fimprocedimento
 
-        se (idChamado > 0) e (idChamado <= totalChamados) então
-            chamados[idChamado].status ← "Escalonado"
-            relatorio.chamadosEscalonados ← relatorio.chamadosEscalonados + 1
-            escreva("Chamado escalonado com sucesso!\n")
-        senão
-            escreva("Chamado inválido.\n")
-        fimse
-    fimfuncao
+// --- Bloco Principal (Início da Execução) ---
+inicio
+   totalChamados <- 0
+   totalTecnicos <- 0
+   opcao <- -1
+   
+   // Menu Principal
+   repita
+      limpatela
+      escreva("=========================================\n")
+      escreva("=   Sistema de Atendimento de Chamados  =\n")
+      escreva("=========================================\n")
+      escreva(" Técnicos: ", totalTecnicos, "/", LIMITE_TECNICOS, " | Chamados: ", totalChamados, "/", LIMITE_CHAMADOS, "\n")
+      escreva("=========================================\n")
+      escreva("1. Adicionar Técnico\n")
+      escreva("2. Adicionar Chamado\n")
+      escreva("3. Atribuir Técnico a Chamado\n")
+      escreva("4. Atualizar Status de Chamado (Concluir/Escalonar)\n")
+      escreva("5. Listar Todos os Chamados (Relatório Detalhado)\n")
+      escreva("6. Gerar Sumário (Dashboard)\n")
+      escreva("0. Sair\n")
+      escreva("-----------------------------------------\n")
+      escreva("Escolha uma opção: ")
+      leia(opcao)
 
-    // Função para gerar relatórios
-    funcao gerarRelatorio()
-        relatorio.totalChamados ← totalChamados
-        relatorio.chamadosEmAndamento ← 0
-
-        para i de 1 até totalChamados faça
-            escolha chamados[i].status
-                caso "Em Andamento"
-                    relatorio.chamadosEmAndamento ← relatorio.chamadosEmAndamento + 1
-                fimescolha
-        fimpara
-
-        escreva("\n=== Relatório de Atendimento ===\n")
-        escreva("Total de Chamados: ", relatorio.totalChamados, "\n")
-        escreva("Chamados Concluídos: ", relatorio.chamadosConcluidos, "\n")
-        escreva("Chamados Em Andamento: ", relatorio.chamadosEmAndamento, "\n")
-        escreva("Chamados Escalonados: ", relatorio.chamadosEscalonados, "\n")
-    fimfuncao
-
-    // Menu Principal
-    repita
-        escreva("\n=== Sistema de Atendimento de Chamados ===\n")
-        escreva("1. Adicionar Técnico\n")
-        escreva("2. Adicionar Chamado\n")
-        escreva("3. Atribuir Técnico a Chamado\n")
-        escreva("4. Concluir Chamado\n")
-        escreva("5. Escalonar Chamado\n")
-        escreva("6. Gerar Relatório\n")
-        escreva("0. Sair\n")
-        escreva("Escolha uma opção: ")
-        leia(opcao)
-
-        escolha opcao
-            caso 1
-                adicionarTecnico()
-            caso 2
-                adicionarChamado()
-            caso 3
-                atribuirTecnico()
-            caso 4
-                concluirChamado()
-            caso 5
-                escalarChamado()
-            caso 6
-                gerarRelatorio()
-            caso 0
-                escreva("Saindo do Sistema de Atendimento de Chamados...\n")
-            caso contrário
-                escreva("Opção inválida.\n")
-        fimescolha
-    até opcao = 0
-
+      escolha opcao
+         caso 1
+            adicionarTecnico()
+            Pausar()
+         caso 2
+            adicionarChamado()
+            Pausar()
+         caso 3
+            atribuirTecnico()
+            Pausar()
+         caso 4
+            atualizarStatusChamado()
+            Pausar()
+         caso 5
+            listarChamados()
+            Pausar()
+         caso 6
+            gerarSumario()
+            Pausar()
+         caso 0
+            escreva("\nSaindo do Sistema de Atendimento de Chamados...\n")
+         padrão
+            escreva("\n[ERRO] Opção inválida.\n")
+            Pausar()
+      fimescolha
+      
+   até (opcao = 0)
 fimalgoritmo
